@@ -1,5 +1,7 @@
 import type { IOBuffer } from 'iobuffer';
 
+import { PngFormatError } from './error.ts';
+
 const crcTable: number[] = [];
 for (let n = 0; n < 256; n++) {
   let c = n;
@@ -45,7 +47,7 @@ export function checkCrc(
     crcLength,
   ); // "- 4" because we already advanced by reading the CRC
   if (actualCrc !== expectedCrc) {
-    throw new Error(
+    throw new PngFormatError(
       `CRC mismatch for chunk ${chunkName}. Expected ${expectedCrc}, found ${actualCrc}`,
     );
   }

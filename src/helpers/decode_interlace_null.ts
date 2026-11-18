@@ -1,5 +1,13 @@
 import type { PngDataArray } from '../types.ts';
 
+import { PngFormatError } from './error.ts';
+import {
+  INTERLACE_NULL,
+  bytesPerScanline,
+  expectedOutputSize,
+  expectedRawDataSize,
+} from './png_size.ts';
+import { checkOutputBudget } from './safe_math.ts';
 import {
   unfilterAverage,
   unfilterNone,
@@ -20,17 +28,53 @@ export interface DecodeInterlaceNullParams {
   height: number;
   channels: number;
   depth: number;
+  maxOutputSize?: number;
 }
 
+/**
+ * Decode a non-interlaced PNG stream: validate the decompressed length and
+ * output budget, then reverse the adaptive row filtering.
+ * @param params - Image data, geometry and optional output limit.
+ * @returns The restored pixel data.
+ */
 export function decodeInterlaceNull(
   params: DecodeInterlaceNullParams,
 ): PngDataArray {
-  const { data, width, height, channels, depth } = params;
+  const {
+    data,
+    width,
+    height,
+    channels,
+    depth,
+    maxOutputSize = Number.POSITIVE_INFINITY,
+  } = params;
 
   const bytesPerPixel = Math.ceil(depth / 8) * channels;
 
-  const bytesPerLine = Math.ceil((depth / 8) * channels * width);
-  const newData = new Uint8Array(height * bytesPerLine);
+  const bytesPerLine = bytesPerScanline(width, channels, depth);
+  const expectedLength = expectedRawDataSize({
+    width,
+    height,
+    channels,
+    depth,
+    interlaceMethod: INTERLACE_NULL,
+  });
+  if (data.length !== expectedLength) {
+    throw new PngFormatError(
+      `Decompressed data length mismatch: expected ${expectedLength} bytes for ${width}x${height} image, got ${data.length}`,
+    );
+  }
+
+  const outputSize = expectedOutputSize({
+    width,
+    height,
+    channels,
+    depth,
+    interlaceMethod: INTERLACE_NULL,
+  });
+  checkOutputBudget(outputSize, maxOutputSize);
+
+  const newData = new Uint8Array(outputSize);
 
   let prevLine = empty;
   let offset = 0;
@@ -69,7 +113,7 @@ export function decodeInterlaceNull(
         );
         break;
       default:
-        throw new Error(`Unsupported filter: ${data[offset]}`);
+        throw new PngFormatError(`Unsupported filter: ${data[offset]}`);
     }
     prevLine = newLine;
     offset += bytesPerLine + 1;

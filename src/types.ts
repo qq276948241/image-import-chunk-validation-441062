@@ -97,7 +97,20 @@ export interface DecodedApngFrame {
 }
 
 export interface PngDecoderOptions {
+  /**
+   * Check the CRC of every chunk and throw if it does not match.
+   * @default false
+   */
   checkCrc?: boolean;
+  /**
+   * Maximum number of bytes that may be produced while decoding:
+   * the decompressed scanline data and the final pixel output, including the
+   * cumulative output of every frame of an animated image. Sizes are checked
+   * before any allocation is made and malformed files whose declared
+   * dimensions or frame count exceed the budget are rejected.
+   * @default Infinity (no additional limit)
+   */
+  maxOutputSize?: number;
 }
 
 export interface PngEncoderOptions {

@@ -36,6 +36,9 @@ npm install fast-png
 #### Options
 
 - `checkCrc` - If set to `true`, the CRC will be checked for each chunk and an error will be thrown in case it's wrong (default: false).
+- `maxOutputSize` - Maximum number of bytes the decoder is allowed to produce, including the decompressed scanline data and the final pixel output. For animated images the output of every frame is counted cumulatively. Sizes are checked before any allocation, so malformed files with huge declared dimensions or frame counts are rejected instead of exhausting memory (default: `Infinity`, no additional limit).
+
+Malformed files (truncated chunks, invalid lengths, bad text or palette data, oversized or corrupted decompressed streams, invalid APNG frame declarations, ...) throw a `PngFormatError` whose message names the offending chunk and its byte offset. The structural checks run before any chunk content is read and are independent of `checkCrc`: a truncated file is rejected even when CRC checking is disabled, and a wrong CRC is only reported when `checkCrc` is enabled.
 
 ### `encode(image)`
 
